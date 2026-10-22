@@ -1,0 +1,37 @@
+name: Playlist test (Android)
+
+on:
+  push:
+    branches: [playlist-playback-test]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test-build:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Test, lint and assemble sideload APK
+        run: ./gradlew --max-workers=1 :composeApp:testAndroidHostTest :androidApp:testDebugUnitTest :androidApp:lintDebug detektAll :androidApp:assembleDebug
+      - name: Upload test APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: music-assistant-playlist-test-apk
+          path: androidApp/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+      - name: Upload test and lint reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-test-reports
+          path: |
+            composeApp/build/reports/
+            androidApp/build/reports/

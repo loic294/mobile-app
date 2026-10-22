@@ -43,6 +43,10 @@ android {
     }
 
     buildTypes {
+        debug {
+            applicationIdSuffix = ".playlisttest"
+            versionNameSuffix = "-playlist-test"
+        }
         release {
             signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = true
@@ -184,4 +188,3 @@ androidComponents {
         )
     }
 }
-

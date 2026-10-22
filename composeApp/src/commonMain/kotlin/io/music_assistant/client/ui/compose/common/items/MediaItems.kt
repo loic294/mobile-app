@@ -67,6 +67,7 @@ import io.music_assistant.client.data.model.client.items.PodcastEpisode
 import io.music_assistant.client.data.model.client.items.RecommendationFolder
 import io.music_assistant.client.data.model.client.items.Track
 import io.music_assistant.client.data.model.client.items.image
+import io.music_assistant.client.data.model.client.remainingSeconds
 import io.music_assistant.client.settings.ViewMode
 import io.music_assistant.client.ui.compose.common.icons.ArtistIcon
 import io.music_assistant.client.ui.compose.common.icons.BookAudioIcon
@@ -78,7 +79,9 @@ import io.music_assistant.client.ui.compose.common.painters.rememberVinylRecordP
 import io.music_assistant.client.ui.compose.common.painters.rememberWaveformPainter
 import io.music_assistant.client.ui.compose.common.providers.ProviderIconFetcher
 import io.music_assistant.client.ui.compose.grid.GridItem
+import io.music_assistant.client.ui.compose.item.LocalPlaylistPlaybackSettings
 import io.music_assistant.client.ui.theme.favoriteTint
+import io.music_assistant.client.utils.formatDuration
 import io.music_assistant.client.utils.rowImageSize
 import musicassistantclient.composeapp.generated.resources.Res
 import musicassistantclient.composeapp.generated.resources.cd_album_item
@@ -87,6 +90,7 @@ import musicassistantclient.composeapp.generated.resources.cd_fully_played
 import musicassistantclient.composeapp.generated.resources.cd_in_progress
 import musicassistantclient.composeapp.generated.resources.cd_vinyl_record
 import org.jetbrains.compose.resources.stringResource
+import kotlin.time.DurationUnit
 
 /** Opacity applied to media items that can't be played (server `is_playable == false`). */
 internal const val DISABLED_ITEM_ALPHA = 0.3f
@@ -986,7 +990,7 @@ internal fun PodcastEpisodeRowItem(
     RowItem(
         modifier = modifier,
         name = item.displayName,
-        subtitle = item.localizedSubtitle(),
+        subtitle = spokenWordSubtitle(item),
         description = contentDescription(item),
         prefixContent = {
             PodcastEpisodeImage(item)
@@ -1002,6 +1006,15 @@ internal fun PodcastEpisodeRowItem(
         onClick = { onClick(item) },
         onLongClick = { onLongClick(item) },
     )
+}
+
+@Composable
+private fun <T> spokenWordSubtitle(item: T): String?
+    where T : AppMediaItem, T : PlayableItem {
+    val subtitle = item.localizedSubtitle()
+    if (LocalPlaylistPlaybackSettings.current?.showRemainingTime != true) return subtitle
+    val remaining = item.remainingSeconds() ?: return subtitle
+    return listOfNotNull(subtitle, "${remaining.formatDuration(DurationUnit.SECONDS)} left").joinToString(" · ")
 }
 
 @Composable
@@ -1191,7 +1204,7 @@ internal fun AudiobookRowItem(
     RowItem(
         modifier = modifier,
         name = item.displayName,
-        subtitle = item.localizedSubtitle(),
+        subtitle = spokenWordSubtitle(item),
         description = contentDescription(item),
         prefixContent = {
             AudiobookImage(item)

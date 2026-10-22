@@ -94,7 +94,7 @@ object SortConfig {
         SubItemContext.ARTIST_ALBUMS -> listOf(SortField.NAME, SortField.YEAR)
         SubItemContext.ARTIST_TRACKS -> listOf(SortField.NAME, SortField.DURATION)
         SubItemContext.ALBUM_TRACKS -> listOf(SortField.ORIGINAL)
-        SubItemContext.PLAYLIST_ITEMS -> listOf(SortField.ORIGINAL)
+        SubItemContext.PLAYLIST_ITEMS -> listOf(SortField.ORIGINAL, SortField.NAME, SortField.DURATION)
         SubItemContext.COLLECTION_ITEMS -> listOf(SortField.ORIGINAL)
         SubItemContext.PODCAST_EPISODES -> listOf(SortField.NAME, SortField.RELEASE_DATE, SortField.DURATION)
         SubItemContext.ARTIST_TOP_TRACKS -> listOf(SortField.ORIGINAL, SortField.NAME, SortField.DURATION)

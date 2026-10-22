@@ -61,12 +61,11 @@ class LibrarySortPersistenceTest {
     }
 
     @Test
-    fun `a stale descending original sort is ignored`() {
-        // ORIGINAL is still a legal field, so only the fixed-order guard catches the direction.
+    fun `playlist original descending sort is preserved`() {
         val settings = MapSettings("sort_sub_PLAYLIST_ITEMS" to "ORIGINAL:true")
         val repo = SettingsRepository(settings, MapSettings())
         assertEquals(
-            SortOption(SortField.ORIGINAL),
+            SortOption(SortField.ORIGINAL, descending = true),
             repo.getSortOption(SubItemContext.PLAYLIST_ITEMS),
         )
     }

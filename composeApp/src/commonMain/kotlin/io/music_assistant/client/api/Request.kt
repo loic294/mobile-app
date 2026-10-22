@@ -396,6 +396,24 @@ data class Request @OptIn(ExperimentalUuidApi::class) constructor(
     }
 
     data object Playlist {
+        fun playbackSettings(itemId: String) = Request(
+            command = "music/playlists/playback_settings",
+            args = buildJsonObject { put("item_id", JsonPrimitive(itemId)) },
+        )
+
+        fun setPlaybackSettings(
+            itemId: String,
+            settings: io.music_assistant.client.data.model.client.PlaylistPlaybackSettings,
+        ) = Request(
+            command = "music/playlists/set_playback_settings",
+            args = buildJsonObject {
+                put("item_id", JsonPrimitive(itemId))
+                put("spoken_word", JsonPrimitive(settings.spokenWord))
+                put("remove_finished", JsonPrimitive(settings.removeFinished))
+                put("show_remaining_time", JsonPrimitive(settings.showRemainingTime))
+            },
+        )
+
         fun get(
             itemId: String,
             providerInstanceIdOrDomain: String,
@@ -870,6 +888,7 @@ data class Request @OptIn(ExperimentalUuidApi::class) constructor(
             option: QueueOption,
             endlessMixMode: Boolean,
             startItem: String? = null,
+            sort: io.music_assistant.client.data.model.client.SortOption? = null,
         ) = Request(
             command = APICommands.PLAYER_QUEUES_PLAY_MEDIA,
             args = buildJsonObject {
@@ -878,6 +897,10 @@ data class Request @OptIn(ExperimentalUuidApi::class) constructor(
                 put("radio_mode", JsonPrimitive(endlessMixMode))
                 put("queue_id", JsonPrimitive(queueOrPlayerId))
                 startItem?.let { put("start_item", JsonPrimitive(it)) }
+                sort?.let {
+                    put("sort_field", JsonPrimitive(it.field.serverKey))
+                    put("sort_direction", JsonPrimitive(if (it.descending) "desc" else "asc"))
+                }
             },
         )
 

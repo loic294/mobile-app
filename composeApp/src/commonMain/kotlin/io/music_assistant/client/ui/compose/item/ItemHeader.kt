@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.Lyrics
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -266,6 +267,16 @@ private fun ItemOverflow(
 ) {
     var showPlaylistDialog by rememberSaveable { mutableStateOf(false) }
     var showRemoveConfirmation by remember { mutableStateOf(false) }
+    val openPlaybackSettings = LocalOpenPlaylistPlaybackSettings.current
+    val playbackSettings = listOfNotNull(
+        openPlaybackSettings?.takeIf { item is io.music_assistant.client.data.model.client.items.Playlist }?.let {
+            OverflowMenuOption(
+                title = "Podcast/Audiobook settings",
+                icon = Icons.Default.Schedule,
+                onClick = it,
+            )
+        },
+    )
 
     // Artist-only, appended last: opens the similar-artists sheet rather than acting on the item,
     // so it stays out of the shared ItemAction/car-action vocabulary.
@@ -311,7 +322,7 @@ private fun ItemOverflow(
     }
     OverflowMenuButton(
         options = canonical + item.navigationOptions(navigateToItem, containerItem = item) + similarArtists +
-            lyrics + dynamicColorsMenuOption(),
+            lyrics + playbackSettings + dynamicColorsMenuOption(),
     ) { onClick ->
         IconButton(onClick = onClick) {
             Icon(

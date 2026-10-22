@@ -6,6 +6,7 @@ import io.music_assistant.client.api.ConnectionInfo
 import io.music_assistant.client.api.Request
 import io.music_assistant.client.api.ServiceClient
 import io.music_assistant.client.data.model.client.MediaType
+import io.music_assistant.client.data.model.client.PlaylistPlaybackSettings
 import io.music_assistant.client.data.model.server.AudioFidelity
 import io.music_assistant.client.data.model.server.AudioFormat
 import io.music_assistant.client.data.model.server.AudioOutputDetails
@@ -85,6 +86,10 @@ class FakeServiceClient : ServiceClient {
         }
 
         return when (request.command) {
+            "music/playlists/playback_settings" -> Result.success(
+                answer(request = request, result = PlaylistPlaybackSettings(false, false, false)),
+            )
+
             APICommands.PROVIDERS -> {
                 Result.success(
                     answer(

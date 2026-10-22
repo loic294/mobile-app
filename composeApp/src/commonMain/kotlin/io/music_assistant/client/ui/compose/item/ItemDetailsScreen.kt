@@ -34,6 +34,7 @@ import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRowDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -60,6 +61,7 @@ import io.music_assistant.client.data.model.client.QueueOption
 import io.music_assistant.client.data.model.client.SortField
 import io.music_assistant.client.data.model.client.SortOption
 import io.music_assistant.client.data.model.client.SubItemContext
+import io.music_assistant.client.data.model.client.canManagePlaybackSettings
 import io.music_assistant.client.data.model.client.items.Album
 import io.music_assistant.client.data.model.client.items.AppMediaItem
 import io.music_assistant.client.data.model.client.items.Artist
@@ -116,6 +118,7 @@ import io.music_assistant.client.ui.compose.nav.TopBarLayout
 import io.music_assistant.client.ui.compose.provider.ProviderViewModel
 import io.music_assistant.client.ui.fullBleed
 import io.music_assistant.client.ui.theme.AppTheme
+import io.music_assistant.client.utils.HasConnectionData
 import musicassistantclient.composeapp.generated.resources.Res
 import musicassistantclient.composeapp.generated.resources.album_disc_header
 import musicassistantclient.composeapp.generated.resources.artist_section_all
@@ -151,7 +154,39 @@ fun ItemDetailsScreen(
     contentPadding: PaddingValues,
 ) {
     val state by itemDetailsViewModel.state.collectAsStateWithLifecycle()
+    val playbackSettings by itemDetailsViewModel.playlistPlaybackSettings.state.collectAsStateWithLifecycle()
+    val scopes by itemDetailsViewModel.playbackSettingsScopes.collectAsStateWithLifecycle()
+    val session by itemDetailsViewModel.playbackSettingsSession.collectAsStateWithLifecycle()
+    val playlist = state.itemState.dataOrNull as? Playlist
+    val controller = itemDetailsViewModel.playlistPlaybackSettings
+    if (playlist != null && playbackSettings.visible) {
+        PlaylistPlaybackSettingsDialog(
+            state = playbackSettings,
+            playlist = playlist,
+            canManage = playlist.canManagePlaybackSettings(
+                (session as? HasConnectionData)?.user?.userId,
+                scopes.canEditLibrary,
+                scopes.has("library.manage"),
+            ),
+            onDismiss = controller::close,
+            onRetry = controller::open,
+            onSave = {
+                controller.save(
+                    it,
+                    playlist.canManagePlaybackSettings(
+                        (session as? HasConnectionData)?.user?.userId,
+                        scopes.canEditLibrary,
+                        scopes.has("library.manage"),
+                    ),
+                )
+            },
+        )
+    }
 
+    CompositionLocalProvider(
+        LocalPlaylistPlaybackSettings provides playbackSettings.value,
+        LocalOpenPlaylistPlaybackSettings provides controller::open,
+    ) {
     ItemDetails(
         contentPadding = contentPadding,
         state = state,
@@ -183,6 +218,7 @@ fun ItemDetailsScreen(
         onRefreshPlaylist = itemDetailsViewModel::refreshPlaylistTracks,
         providerDetails = providerViewModel::getProviderDetails,
     )
+    }
 }
 
 @Composable
@@ -956,7 +992,13 @@ private fun PlayablesTabContent(
             is Audiobook -> AudiobookWithMenu(
                 item = track,
                 viewMode = viewMode,
-                onNavigateClick = onNavigateClick,
+                onNavigateClick = {
+                    if (parentItem is Playlist) {
+                        onPlayChildClick(it, QueueOption.REPLACE, false, false)
+                    } else {
+                        onNavigateClick(it)
+                    }
+                },
                 onPlayOption = onPlayChildClick,
                 playlistActions = playlistActions,
                 onRemoveFromPlaylist = onRemove,

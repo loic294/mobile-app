@@ -98,6 +98,7 @@ class MediaItemFactory(
                 images = resolveImageInfo(image, metadata),
                 isEditable = isEditable == true,
                 isDynamic = isDynamic == true,
+                access = access,
                 supportedMediaTypes = supportedMediatypes?.mapNotNull(MediaType::fromServer)?.toSet(),
             )
 

@@ -65,6 +65,9 @@ iOS users can join [TestFlight](https://testflight.apple.com/join/AkvSDf2z).
 
 For information on configuring and using the Music Assistant Mobile app, see the [App Documentation](docs/app-documentation/index.md).
 
+For the podcast/audiobook playlist feature and side-by-side Android test APK,
+see [Playlist playback settings and test installation](docs/playlist-playback-settings.md).
+
 ## Android Auto & Google Assistant
 
 See [ANDROID-AUTO](docs/ANDROID-AUTO.md) for:

@@ -25,6 +25,8 @@ import io.music_assistant.client.data.model.client.items.Podcast
 import io.music_assistant.client.data.model.client.items.PodcastEpisode
 import io.music_assistant.client.data.model.client.items.RecommendationFolder
 import io.music_assistant.client.data.model.client.items.Track
+import io.music_assistant.client.data.model.client.playlistPlayContext
+import io.music_assistant.client.data.model.server.events.PlaylogUpdatedEvent
 import io.music_assistant.client.data.play.PlayDispatcher
 import io.music_assistant.client.data.play.PlayRequest
 import io.music_assistant.client.data.repository.MediaItemChange
@@ -34,17 +36,26 @@ import io.music_assistant.client.data.repository.favoriteAfter
 import io.music_assistant.client.settings.SettingsRepository
 import io.music_assistant.client.ui.compose.common.DataState
 import io.music_assistant.client.ui.compose.common.map
+import io.music_assistant.client.utils.HasConnectionData
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalCoroutinesApi::class)
+private const val PLAYLOG_REFRESH_DELAY_MS = 250L
+
+@OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 class ItemDetailsViewModel(
     private val playDispatcher: PlayDispatcher,
     private val mainDataSource: MainDataSource,
@@ -101,6 +112,7 @@ class ItemDetailsViewModel(
     private var rawAlbums: List<Album> = emptyList()
     private var rawPlayableItems: List<PlayableItem> = emptyList()
     private var playableItemsContext: SubItemContext? = null
+    private var playlistTracksJob: Job? = null
 
     /** Inputs of the visible playable list. Null while that list is not Data; see [setPlayableItemsState]. */
     private val playableInputs = MutableStateFlow<PlayableInputs?>(null)
@@ -125,8 +137,29 @@ class ItemDetailsViewModel(
         ),
     )
     val state = _state.asStateFlow()
+    val playlistPlaybackSettings = PlaylistPlaybackSettingsController(mainDataSource.apiClient, viewModelScope)
+    val playbackSettingsScopes = mainDataSource.grantedScopes
+    val playbackSettingsSession = mainDataSource.apiClient.sessionState
 
     init {
+        if (mediaType == MediaType.PLAYLIST) {
+            viewModelScope.launch {
+                mainDataSource.apiClient.events
+                    .filterIsInstance<PlaylogUpdatedEvent>()
+                    .filter { event ->
+                        event.data.userId?.let {
+                            it == (mainDataSource.apiClient.sessionState.value as? HasConnectionData)?.user?.userId
+                        } ?: true
+                    }
+                    .flowOn(Dispatchers.Default)
+                    .debounce(PLAYLOG_REFRESH_DELAY_MS)
+                    .collect {
+                        (_state.value.itemState.dataOrNull as? Playlist)?.let {
+                            loadPlaylistTracks(it.itemId, it.provider, background = true)
+                        }
+                    }
+            }
+        }
         // Listen to library changes; refresh the open item + its sub-lists.
         // The repository already handles the library-fallback re-keying that
         // used to live here for delete events.
@@ -221,6 +254,7 @@ class ItemDetailsViewModel(
             }
 
             is Playlist -> {
+                playlistPlaybackSettings.load(item)
                 _state.update {
                     it.copy(
                         albumsState = DataState.NoData(),
@@ -327,9 +361,11 @@ class ItemDetailsViewModel(
         itemId: String,
         provider: String,
         forceRefresh: Boolean = false,
+        background: Boolean = false,
     ) {
-        viewModelScope.launch {
-            setPlayableItemsState(DataState.Loading())
+        playlistTracksJob?.cancel()
+        playlistTracksJob = viewModelScope.launch {
+            if (!background) setPlayableItemsState(DataState.Loading())
 
             try {
                 val tracks = mediaItemRepository.fetchAllMediaItems(
@@ -343,6 +379,8 @@ class ItemDetailsViewModel(
                     ?: emptyList()
 
                 setPlayableItems(tracks, SubItemContext.PLAYLIST_ITEMS)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Logger.e("Failed to load playlist tracks", e)
                 setPlayableItemsState(DataState.Error())
@@ -502,17 +540,20 @@ class ItemDetailsViewModel(
         fromHereInParent: Boolean,
     ) {
         val parent = (_state.value.itemState as? DataState.Data)?.data
-        val (itemToPlay, startItem) = if (fromHereInParent && parent != null) {
-            Pair(parent, item)
-        } else {
-            Pair(item, null)
-        }
+        val context = playlistPlayContext(
+            item,
+            parent,
+            fromHereInParent,
+            _state.value.playableItemsSortOption ?: SortConfig.defaultFor(SubItemContext.PLAYLIST_ITEMS),
+        )
+        val itemToPlay = context.media
+        val startItem = context.startItem
 
         val mediaUri = itemToPlay.mediaUri ?: return
         mainDataSource.selectedPlayer?.queueOrPlayerId?.let { queueId ->
             Logger.withTag("PlayDispatch").i {
                 "ItemDetailsViewModel.onPlayClick: uri=$mediaUri option=$option " +
-                        "endlessMix=$endlessMix startItem=${startItem?.itemId} queue=$queueId"
+                        "endlessMix=$endlessMix startItem=$startItem queue=$queueId"
             }
             playDispatcher.play(
                 PlayRequest(
@@ -520,7 +561,8 @@ class ItemDetailsViewModel(
                     media = listOf(mediaUri),
                     option = option,
                     endlessMixMode = endlessMix && item !is Genre,
-                    startItem = startItem?.itemId,
+                    startItem = startItem,
+                    sort = context.sort,
                 ),
             )
         }

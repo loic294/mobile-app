@@ -106,5 +106,6 @@ class PlayDispatcher(
         option = option,
         endlessMixMode = endlessMixMode,
         startItem = startItem,
+        sort = sort,
     )
 }

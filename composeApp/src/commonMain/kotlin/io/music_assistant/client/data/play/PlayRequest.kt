@@ -10,4 +10,5 @@ data class PlayRequest(
     val endlessMixMode: Boolean = false,
     /** Server-side "start playback from this item id within [media]" (play-from-here). */
     val startItem: String? = null,
+    val sort: io.music_assistant.client.data.model.client.SortOption? = null,
 )

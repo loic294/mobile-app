@@ -39,7 +39,7 @@ data class ServerMediaItem(
     @SerialName("artists") val artists: List<ServerMediaItem>? = null,
     // @SerialName("album_type") val albumType: AlbumType? = null,
     // Playlist only
-    // @SerialName("owner") val owner: String? = null,
+    @SerialName("access") val access: io.music_assistant.client.data.model.client.PlaylistAccess? = null,
     @SerialName("is_editable") val isEditable: Boolean? = null,
     @SerialName("is_dynamic") val isDynamic: Boolean? = null,
     @SerialName("supported_mediatypes") val supportedMediatypes: List<String>? = null,
