@@ -4,8 +4,8 @@ Requires a Music Assistant server with `music/playlists/playback_settings` and
 `music/playlists/set_playback_settings`. An older server's missing endpoint is
 shown as an error, never treated as default settings.
 
-For the official **Music Assistant DEV SERVER** app configured with both fork
-branches, see the
+For the official **Music Assistant DEV SERVER** app configured with the fork
+server and its prebuilt frontend (`frontend_repo: ""`), see the
 [server test deployment guide](https://github.com/loic294/server/blob/playlist-playback-test/docs/test-deployment.md).
 Connect this client to `http://HOME_ASSISTANT_IP:8195` (on this network,
 `http://192.168.68.76:8195`), not the normal server at port 8095.
